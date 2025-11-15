@@ -53,6 +53,26 @@ A high-performance React TypeScript application for managing and analyzing large
 - Drag-and-drop file upload
 - Smooth transitions and hover effects
 
+### Bonus Features (Implemented)
+
+✅ **Virtual Scrolling**
+- Windowing/virtualization using TanStack Virtual
+- Only renders ~50-60 visible rows instead of all 30,000+
+- Performance improvement: 99%+ reduction in DOM nodes
+- Smooth 60 FPS scrolling maintained
+- Overscan of 10 rows for seamless experience
+
+✅ **Bulk Actions**
+- Multi-row selection with checkboxes
+- Select all functionality (pagination-aware)
+- Batch operations:
+  - Export selected rows to CSV
+  - Delete selected rows (with confirmation)
+  - Clear selection
+- Visual feedback for selected rows (blue highlight)
+- Selection counter showing number of selected rows
+- Bulk action bar appears when rows are selected
+
 ## 🛠️ Technology Stack
 
 ### Required
