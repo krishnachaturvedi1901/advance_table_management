@@ -54,11 +54,13 @@ function App() {
                   <li>✓ Virtual scrolling for smooth performance with 30,000+ rows</li>
                   <li>✓ Multi-row selection with checkboxes</li>
                   <li>✓ Bulk actions (export selected, delete selected)</li>
+                  <li>✓ Column management (show/hide, resize, reorder)</li>
                   <li>✓ Column sorting (click headers to sort)</li>
                   <li>✓ Advanced filtering on multiple columns</li>
                   <li>✓ Global search across all data</li>
                   <li>✓ Pagination with customizable page sizes</li>
                   <li>✓ Export filtered data to CSV</li>
+                  <li>✓ Persistent preferences (localStorage)</li>
                   <li>✓ Responsive design</li>
                 </ul>
               </div>

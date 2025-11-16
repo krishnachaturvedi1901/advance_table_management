@@ -46,6 +46,9 @@ The app will open at `http://localhost:5173`
 | **Search** | Type in the search bar at top |
 | **Export** | Click "Export CSV" button |
 | **Pagination** | Use dropdown and arrow buttons at bottom |
+| **Resize Columns** | Hover over column right edge, drag the blue handle |
+| **Reorder Columns** | Drag the ☰ hamburger icon to reorder |
+| **Show/Hide Columns** | Click "☰ Columns" button at top |
 
 ## Troubleshooting
 

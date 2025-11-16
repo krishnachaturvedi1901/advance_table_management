@@ -73,6 +73,18 @@ A high-performance React TypeScript application for managing and analyzing large
 - Selection counter showing number of selected rows
 - Bulk action bar appears when rows are selected
 
+✅ **Column Management**
+- Toggle column visibility (show/hide columns)
+- Column resizing with drag handles (with min/max constraints)
+- Column reordering via drag-and-drop (☰ icon)
+- Persist preferences to localStorage
+- Search columns by name
+- Show/Hide all columns
+- Reset to default settings
+- Visual resize handles on hover (blue highlight)
+- Minimum and maximum width constraints prevent extreme sizing
+- Smooth drag-and-drop experience
+
 ## 🛠️ Technology Stack
 
 ### Required

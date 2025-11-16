@@ -17,6 +17,8 @@ import { formatDuration, formatPercentage, formatNumber } from '../utils/formatt
 import { TextFilter, RangeFilter, SelectFilter } from './Filters';
 import { exportToCSV } from '../utils/csvParser';
 import { useDebounce } from '../hooks/useDebounce';
+import { useTableState } from '../hooks/useTableState';
+import ColumnManagement from './ColumnManagement';
 
 interface DataTableProps {
   data: SpotifyTrack[];
@@ -29,6 +31,18 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const debouncedGlobalFilter = useDebounce(globalFilter, 300);
   
+  // Column management state with localStorage persistence
+  const {
+    columnVisibility,
+    setColumnVisibility,
+    columnOrder,
+    setColumnOrder,
+    columnSizing,
+    setColumnSizing,
+    resetState,
+  } = useTableState();
+  
+  const [showColumnManager, setShowColumnManager] = useState(false);
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const [renderTime, setRenderTime] = useState<number>(0);
 
@@ -61,6 +75,11 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
         ),
         enableSorting: false,
         enableColumnFilter: false,
+        enableHiding: false,
+        enableResizing: false,
+        size: 50,
+        minSize: 50,
+        maxSize: 50,
       },
       {
         accessorKey: 'track_name',
@@ -68,6 +87,9 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
         cell: info => <span className="font-medium">{info.getValue() as string}</span>,
         enableColumnFilter: true,
         filterFn: 'includesString',
+        size: 250,
+        minSize: 150,
+        maxSize: 500,
         meta: {
           filterComponent: (column: any) => <TextFilter column={column} />,
         },
@@ -77,6 +99,9 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
         header: 'Artist',
         enableColumnFilter: true,
         filterFn: 'includesString',
+        size: 200,
+        minSize: 120,
+        maxSize: 400,
         meta: {
           filterComponent: (column: any) => <TextFilter column={column} />,
         },
@@ -85,12 +110,18 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
         accessorKey: 'album_name',
         header: 'Album',
         enableColumnFilter: false,
+        size: 200,
+        minSize: 120,
+        maxSize: 400,
       },
       {
         accessorKey: 'genre',
         header: 'Genre',
         enableColumnFilter: true,
         filterFn: 'equals',
+        size: 150,
+        minSize: 100,
+        maxSize: 300,
         meta: {
           filterComponent: (column: any) => <SelectFilter column={column} options={uniqueGenres} />,
         },
@@ -100,6 +131,9 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
         header: 'Popularity',
         cell: info => formatNumber(info.getValue() as number, 0),
         enableColumnFilter: true,
+        size: 120,
+        minSize: 90,
+        maxSize: 200,
         filterFn: (row, columnId, filterValue) => {
           const value = row.getValue(columnId) as number;
           const [min, max] = filterValue as [number, number];
@@ -114,12 +148,18 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
         header: 'Tempo (BPM)',
         cell: info => formatNumber(info.getValue() as number, 1),
         enableColumnFilter: false,
+        size: 130,
+        minSize: 100,
+        maxSize: 200,
       },
       {
         accessorKey: 'energy',
         header: 'Energy',
         cell: info => formatPercentage(info.getValue() as number),
         enableColumnFilter: true,
+        size: 120,
+        minSize: 80,
+        maxSize: 200,
         filterFn: (row, columnId, filterValue) => {
           const value = row.getValue(columnId) as number;
           const [min, max] = filterValue as [number, number];
@@ -134,17 +174,26 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
         header: 'Danceability',
         cell: info => formatPercentage(info.getValue() as number),
         enableColumnFilter: false,
+        size: 140,
+        minSize: 100,
+        maxSize: 200,
       },
       {
         accessorKey: 'duration_ms',
         header: 'Duration',
         cell: info => formatDuration(info.getValue() as number),
         enableColumnFilter: false,
+        size: 100,
+        minSize: 80,
+        maxSize: 150,
       },
       {
         accessorKey: 'release_date',
         header: 'Release Date',
         enableColumnFilter: false,
+        size: 130,
+        minSize: 100,
+        maxSize: 200,
       },
       {
         accessorKey: 'explicit',
@@ -157,6 +206,9 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
           </span>
         ),
         enableColumnFilter: false,
+        size: 100,
+        minSize: 80,
+        maxSize: 150,
       },
     ],
     [uniqueGenres]
@@ -170,12 +222,20 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
       columnFilters,
       globalFilter: debouncedGlobalFilter,
       rowSelection,
+      columnVisibility,
+      columnOrder,
+      columnSizing,
     },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange: setGlobalFilter,
     onRowSelectionChange: setRowSelection,
+    onColumnVisibilityChange: setColumnVisibility,
+    onColumnOrderChange: setColumnOrder,
+    onColumnSizingChange: setColumnSizing,
     enableRowSelection: true,
+    enableColumnResizing: true,
+    columnResizeMode: 'onChange',
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -237,6 +297,46 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
     setRowSelection({});
   };
 
+  // Column reordering handlers
+  const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
+
+  const handleDragStart = (e: React.DragEvent, columnId: string) => {
+    setDraggedColumn(columnId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent, targetColumnId: string) => {
+    e.preventDefault();
+    if (!draggedColumn || draggedColumn === targetColumnId) {
+      setDraggedColumn(null);
+      return;
+    }
+
+    const currentOrder = table.getState().columnOrder;
+    const allColumns = table.getAllLeafColumns().map(col => col.id);
+    const orderToUse = currentOrder.length > 0 ? currentOrder : allColumns;
+
+    const draggedIndex = orderToUse.indexOf(draggedColumn);
+    const targetIndex = orderToUse.indexOf(targetColumnId);
+
+    if (draggedIndex === -1 || targetIndex === -1) {
+      setDraggedColumn(null);
+      return;
+    }
+
+    const newOrder = [...orderToUse];
+    newOrder.splice(draggedIndex, 1);
+    newOrder.splice(targetIndex, 0, draggedColumn);
+
+    setColumnOrder(newOrder);
+    setDraggedColumn(null);
+  };
+
   const totalRows = table.getFilteredRowModel().rows.length;
   const { pageIndex, pageSize } = table.getState().pagination;
   const startRow = pageIndex * pageSize + 1;
@@ -257,6 +357,13 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
               className="w-full px-4 py-2 border border-gray-600 rounded-lg bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
+          <button
+            onClick={() => setShowColumnManager(true)}
+            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"
+            title="Manage Columns"
+          >
+            ☰ Columns
+          </button>
           <button
             onClick={handleExport}
             className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
@@ -295,19 +402,24 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
         )}
 
         {/* Stats and Performance */}
-        <div className="flex gap-4 text-sm text-gray-300 items-center">
-          <span>
-            Showing <span className="font-semibold text-white">{startRow}-{endRow}</span> of{' '}
-            <span className="font-semibold text-white">{totalRows}</span> tracks
-          </span>
-          {debouncedGlobalFilter && (
-            <span className="text-blue-400">
-              ✓ Search active
+        <div className="flex flex-col gap-2">
+          <div className="flex gap-4 text-sm text-gray-300 items-center">
+            <span>
+              Showing <span className="font-semibold text-white">{startRow}-{endRow}</span> of{' '}
+              <span className="font-semibold text-white">{totalRows}</span> tracks
             </span>
-          )}
-          <span className="text-gray-500 ml-auto">
-            ⚡ Virtual scrolling: {rows.length} rows rendered
-          </span>
+            {debouncedGlobalFilter && (
+              <span className="text-blue-400">
+                ✓ Search active
+              </span>
+            )}
+            <span className="text-gray-500 ml-auto">
+              ⚡ Virtual scrolling: {rows.length} rows rendered
+            </span>
+          </div>
+          <div className="text-xs text-gray-500">
+            💡 Tip: Drag the ☰ icon to reorder columns | Hover & drag column right edge to resize | Click "☰ Columns" to show/hide
+          </div>
         </div>
       </div>
 
@@ -317,7 +429,7 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
         className="flex-1 overflow-auto border border-gray-700 rounded-lg"
         style={{ height: '600px' }}
       >
-        <table className="w-full text-sm">
+        <table className="text-sm" style={{ width: table.getCenterTotalSize() }}>
           <thead className="sticky top-0 bg-gray-800 z-10">
             {table.getHeaderGroups().map(headerGroup => (
               <React.Fragment key={headerGroup.id}>
@@ -325,29 +437,76 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
                   {headerGroup.headers.map(header => (
                     <th
                       key={header.id}
-                      className="px-4 py-3 text-left font-semibold text-gray-200 border-b border-gray-700"
-                      style={{ minWidth: header.column.getSize() }}
+                      className={`px-4 py-3 text-left font-semibold text-gray-200 border-b border-r border-gray-600 relative ${
+                        draggedColumn === header.id ? 'opacity-50 bg-blue-900' : ''
+                      }`}
+                      style={{ 
+                        width: `${header.getSize()}px`,
+                        minWidth: `${header.getSize()}px`,
+                        maxWidth: `${header.getSize()}px`,
+                      }}
+                      onDragOver={handleDragOver}
+                      onDrop={(e) => handleDrop(e, header.id)}
                     >
                       {header.isPlaceholder ? null : (
-                        <div
-                          className={`flex items-center gap-2 ${
-                            header.column.getCanSort() ? 'cursor-pointer select-none' : ''
-                          }`}
-                          onClick={header.column.getToggleSortingHandler()}
-                        >
-                          {flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
+                        <>
+                          <div className="flex items-center gap-2">
+                            {/* Drag handle for column reordering */}
+                            {header.id !== 'select' && (
+                              <div
+                                draggable
+                                onDragStart={(e) => {
+                                  e.stopPropagation();
+                                  handleDragStart(e, header.id);
+                                }}
+                                className="cursor-move text-gray-500 hover:text-gray-300 transition-colors px-1"
+                                title="Drag to reorder column"
+                              >
+                                ☰
+                              </div>
+                            )}
+                            <div
+                              className={`flex items-center gap-2 flex-1 ${
+                                header.column.getCanSort() ? 'cursor-pointer select-none' : ''
+                              }`}
+                              onClick={header.column.getToggleSortingHandler()}
+                            >
+                              {flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                              {header.column.getCanSort() && (
+                                <span className="text-gray-400">
+                                  {{
+                                    asc: ' ▲',
+                                    desc: ' ▼',
+                                  }[header.column.getIsSorted() as string] ?? ' ⇅'}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          {header.column.getCanResize() && (
+                            <div
+                              onMouseDown={(e) => {
+                                e.stopPropagation();
+                                header.getResizeHandler()(e);
+                              }}
+                              onTouchStart={(e) => {
+                                e.stopPropagation();
+                                header.getResizeHandler()(e);
+                              }}
+                              className={`absolute right-0 top-0 h-full w-3 cursor-col-resize select-none touch-none ${
+                                header.column.getIsResizing() ? 'bg-blue-500 opacity-100' : 'hover:bg-blue-500 hover:opacity-60'
+                              }`}
+                              style={{
+                                transform: header.column.getIsResizing()
+                                  ? `translateX(${table.getState().columnSizingInfo.deltaOffset}px)`
+                                  : '',
+                              }}
+                              title="Drag to resize column"
+                            />
                           )}
-                          {header.column.getCanSort() && (
-                            <span className="text-gray-400">
-                              {{
-                                asc: ' ▲',
-                                desc: ' ▼',
-                              }[header.column.getIsSorted() as string] ?? ' ⇅'}
-                            </span>
-                          )}
-                        </div>
+                        </>
                       )}
                     </th>
                   ))}
@@ -355,7 +514,15 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
                 {/* Filter Row */}
                 <tr>
                   {headerGroup.headers.map(header => (
-                    <th key={header.id} className="px-4 py-2 border-b border-gray-700">
+                    <th 
+                      key={header.id} 
+                      className="px-4 py-2 border-b border-r border-gray-600"
+                      style={{ 
+                        width: `${header.getSize()}px`,
+                        minWidth: `${header.getSize()}px`,
+                        maxWidth: `${header.getSize()}px`,
+                      }}
+                    >
                       {header.column.getCanFilter() && header.column.columnDef.meta?.filterComponent
                         ? (header.column.columnDef.meta.filterComponent as any)(header.column)
                         : null}
@@ -382,7 +549,15 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
                   }}
                 >
                   {row.getVisibleCells().map(cell => (
-                    <td key={cell.id} className="px-4 py-3 text-gray-300">
+                    <td 
+                      key={cell.id} 
+                      className="px-4 py-3 text-gray-300 border-r border-gray-700"
+                      style={{ 
+                        width: `${cell.column.getSize()}px`,
+                        minWidth: `${cell.column.getSize()}px`,
+                        maxWidth: `${cell.column.getSize()}px`,
+                      }}
+                    >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   ))}
@@ -408,6 +583,13 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
               </option>
             ))}
           </select>
+          <button
+            onClick={resetState}
+            className="ml-4 px-3 py-1 text-sm text-gray-400 hover:text-white transition-colors"
+            title="Reset column preferences"
+          >
+            ↻ Reset Columns
+          </button>
         </div>
 
         <div className="flex items-center gap-2">
@@ -445,6 +627,14 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
           </button>
         </div>
       </div>
+
+      {/* Column Management Modal */}
+      {showColumnManager && (
+        <ColumnManagement
+          table={table}
+          onClose={() => setShowColumnManager(false)}
+        />
+      )}
     </div>
   );
 };
