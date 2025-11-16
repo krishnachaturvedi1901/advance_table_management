@@ -25,3 +25,4 @@ dist-ssr
 
 # CSV data files
 *.csv
+.vercel

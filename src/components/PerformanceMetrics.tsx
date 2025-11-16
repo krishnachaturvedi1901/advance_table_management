@@ -2,13 +2,11 @@ import React from 'react';
 
 interface PerformanceMetricsProps {
   totalRows: number;
-  renderedRows: number;
   virtualizedRows: number;
 }
 
 const PerformanceMetrics: React.FC<PerformanceMetricsProps> = ({
   totalRows,
-  renderedRows,
   virtualizedRows,
 }) => {
   const improvement = totalRows > 0 

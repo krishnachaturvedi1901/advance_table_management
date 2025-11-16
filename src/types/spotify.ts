@@ -26,3 +26,7 @@ export interface TableState {
     pageSize: number;
   };
 }
+
+export interface ColumnMetaType {
+  filterComponent?: (column: any) => React.ReactNode;
+}

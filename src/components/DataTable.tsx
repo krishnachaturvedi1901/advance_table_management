@@ -12,7 +12,7 @@ import {
   RowSelectionState,
 } from '@tanstack/react-table';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { SpotifyTrack } from '../types/spotify';
+import { SpotifyTrack, ColumnMetaType } from '../types/spotify';
 import { formatDuration, formatPercentage, formatNumber } from '../utils/formatters';
 import { TextFilter, RangeFilter, SelectFilter } from './Filters';
 import { exportToCSV } from '../utils/csvParser';
@@ -44,7 +44,6 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
   
   const [showColumnManager, setShowColumnManager] = useState(false);
   const tableContainerRef = useRef<HTMLDivElement>(null);
-  const [renderTime, setRenderTime] = useState<number>(0);
 
   // Get unique genres for filter dropdown
   const uniqueGenres = useMemo(() => {
@@ -52,19 +51,27 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
     return Array.from(genres).sort();
   }, [data]);
 
-  const columns = useMemo<ColumnDef<SpotifyTrack>[]>(
+  const columns = useMemo<ColumnDef<SpotifyTrack, any>[]>(
     () => [
       {
         id: 'select',
-        header: ({ table }) => (
-          <input
-            type="checkbox"
-            checked={table.getIsAllPageRowsSelected()}
-            indeterminate={table.getIsSomePageRowsSelected()}
-            onChange={table.getToggleAllPageRowsSelectedHandler()}
-            className="w-4 h-4 cursor-pointer"
-          />
-        ),
+        header: ({ table }) => {
+          const checkbox = React.useRef<HTMLInputElement>(null);
+          React.useEffect(() => {
+            if (checkbox.current) {
+              checkbox.current.indeterminate = table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected();
+            }
+          }, [table]);
+          return (
+            <input
+              ref={checkbox}
+              type="checkbox"
+              checked={table.getIsAllPageRowsSelected()}
+              onChange={table.getToggleAllPageRowsSelectedHandler()}
+              className="w-4 h-4 cursor-pointer"
+            />
+          );
+        },
         cell: ({ row }) => (
           <input
             type="checkbox"
@@ -250,13 +257,6 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
 
   const { rows } = table.getRowModel();
   
-  // Performance measurement for virtual scrolling
-  React.useEffect(() => {
-    const startTime = performance.now();
-    const endTime = performance.now();
-    setRenderTime(endTime - startTime);
-  }, [rows.length]);
-  
   const rowVirtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => tableContainerRef.current,
@@ -287,10 +287,6 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
       setRowSelection({});
       alert(`${selectedCount} track(s) would be deleted (demo mode - no actual deletion)`);
     }
-  };
-
-  const handleSelectAll = () => {
-    table.toggleAllPageRowsSelected();
   };
 
   const handleClearSelection = () => {
@@ -523,8 +519,8 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
                         maxWidth: `${header.getSize()}px`,
                       }}
                     >
-                      {header.column.getCanFilter() && header.column.columnDef.meta?.filterComponent
-                        ? (header.column.columnDef.meta.filterComponent as any)(header.column)
+                      {header.column.getCanFilter() && (header.column.columnDef.meta as ColumnMetaType)?.filterComponent
+                        ? ((header.column.columnDef.meta as ColumnMetaType).filterComponent as any)(header.column)
                         : null}
                     </th>
                   ))}
