@@ -2,6 +2,12 @@
 
 A high-performance React TypeScript application for managing and analyzing large Spotify track datasets (30,000+ rows) with advanced table features.
 
+## 🌐 Live Demo
+
+**Try the live app:** [https://spotify-table-app.vercel.app/](https://spotify-table-app.vercel.app/)
+
+No installation required - upload your Spotify dataset CSV and start exploring!
+
 ## 🚀 Features Implemented
 
 ### Core Requirements (All Completed)
